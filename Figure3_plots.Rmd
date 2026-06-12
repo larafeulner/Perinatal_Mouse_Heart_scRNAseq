@@ -1,0 +1,148 @@
+---
+title: "Figure 3 plots"
+output: pdf_document
+author: Lara Feulner
+---
+
+```{r}
+# Load packages
+
+library(Seurat)
+library(ggplot2)
+library(cowplot)
+library(patchwork)
+library(gridExtra)
+library(psupertime)
+```
+
+# Figure 3a example plot
+
+```{r}
+# Load psupertime result for specific cell type
+
+psuper_VIC = readRDS("~/psupertime_results/VIC_psuper.Rds")
+```
+
+```{r}
+# Save psupertime plot 
+
+vlplot = plot_specified_genes_over_psupertime(psuper_VIC, "H19", palette = "Spectral") + guides(color = guide_legend(override.aes = list(size = 3.25), keyheight = 1)) + theme(strip.text = element_text(size=13))
+save_plot("~/H19_VIC.png",
+          vlplot,
+          base_height=2.25,
+          dpi = 300
+)
+```
+
+# Figure 3b complete plot
+
+```{r}
+# Create Seurat objects for major cell types
+
+data_ACM = Read10X("~/subset_mats_psupertime/ACM_subset_mat")
+data_ACM = CreateSeuratObject(data_ACM)
+meta_ACM = read.table("~/subset_meta_psupertime/ACM_meta.txt", header=T)
+data_ACM@meta.data = meta_ACM
+data_ACM = NormalizeData(data_ACM)
+data_ACM = ScaleData(data_ACM)
+
+data_VCM = Read10X("~/subset_mats_psupertime/VCM_subset_mat")
+data_VCM = CreateSeuratObject(data_VCM)
+meta_VCM = read.table("~/subset_meta_psupertime/VCM_meta.txt", header=T)
+data_VCM@meta.data = meta_VCM
+data_VCM = NormalizeData(data_VCM)
+data_VCM = ScaleData(data_VCM)
+
+data_EPI = Read10X("~/subset_mats_psupertime/EPI_subset_mat")
+data_EPI = CreateSeuratObject(data_EPI)
+meta_EPI = read.table("~/subset_meta_psupertime/EPI_meta.txt", header=T)
+data_EPI@meta.data = meta_EPI
+data_EPI = NormalizeData(data_EPI)
+data_EPI = ScaleData(data_EPI)
+
+data_ENDO = Read10X("~/subset_mats_psupertime/ENDO_subset_mat")
+data_ENDO = CreateSeuratObject(data_ENDO)
+meta_ENDO = read.table("~/subset_meta_psupertime/ENDO_meta.txt", header=T)
+data_ENDO@meta.data = meta_ENDO
+data_ENDO = NormalizeData(data_ENDO)
+data_ENDO = ScaleData(data_ENDO)
+
+data_VIC = Read10X("~/subset_mats_psupertime/VIC_subset_mat")
+data_VIC = CreateSeuratObject(data_VIC)
+meta_VIC = read.table("~/subset_meta_psupertime/VIC_meta.txt", header=T)
+data_VIC@meta.data = meta_VIC
+data_VIC = NormalizeData(data_VIC)
+data_VIC = ScaleData(data_VIC)
+
+data_VEC = Read10X("~/subset_mats_psupertime/VEC_subset_mat")
+data_VEC = CreateSeuratObject(data_VEC)
+meta_VEC = read.table("~/subset_meta_psupertime/VEC_meta.txt", header=T)
+data_VEC@meta.data = meta_VEC
+data_VEC = NormalizeData(data_VEC)
+data_VEC = ScaleData(data_VEC)
+
+data_VSM = Read10X("~/subset_mats_psupertime/VSM1_subset_mat")
+data_VSM = CreateSeuratObject(data_VSM)
+meta_VSM = read.table("~/subset_meta_psupertime/VSM1_meta.txt", header=T)
+data_VSM@meta.data = meta_VSM
+data_VSM = NormalizeData(data_VSM)
+data_VSM = ScaleData(data_VSM)
+
+data_MAC = Read10X("~/subset_mats_psupertime/MAC_subset_mat")
+data_MAC = CreateSeuratObject(data_MAC)
+meta_MAC = read.table("~/subset_meta_psupertime/MAC_meta.txt", header=T)
+data_MAC@meta.data = meta_MAC
+data_MAC = NormalizeData(data_MAC)
+data_MAC = ScaleData(data_MAC)
+
+data_VASCE = Read10X("~/subset_mats_psupertime/VASCE_subset_mat")
+data_VASCE = CreateSeuratObject(data_VASCE)
+meta_VASCE = read.table("~/subset_meta_psupertime/VASCE_meta.txt", header=T)
+data_VASCE@meta.data = meta_VASCE
+data_VASCE = NormalizeData(data_VASCE)
+data_VASCE = ScaleData(data_VASCE)
+
+data_FIB = Read10X("~/subset_mats_psupertime/CFIB1_subset_mat")
+data_FIB = CreateSeuratObject(data_FIB)
+meta_FIB = read.table("~/subset_meta_psupertime/CFIB1_meta.txt", header=T)
+data_FIB@meta.data = meta_FIB
+data_FIB = NormalizeData(data_FIB)
+data_FIB = ScaleData(data_FIB)
+```
+
+```{r}
+# Make violin plots
+
+ACM_plot = VlnPlot(data_ACM, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Atrial Cardiomyocytes") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+VCM_plot = VlnPlot(data_VCM, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Ventricular Cardiomyocytes") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+EPI_plot = VlnPlot(data_EPI, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Epicardial Cells") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+FIB_plot = VlnPlot(data_FIB, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Cardiac Fibroblasts") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+VIC_plot = VlnPlot(data_VIC, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Valve Interstitial Cells") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+VSM_plot = VlnPlot(data_VSM, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Vascular Smooth Muscle") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+ENDO_plot = VlnPlot(data_ENDO, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Endocardial Cells") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+VEC_plot = VlnPlot(data_VEC, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Valve Endothelial Cells") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+
+VASCE_plot = VlnPlot(data_VASCE, "H19", group.by="Age", cols=c("#3288BD", "#99D594", "#E6F598", "#FEE08B", "#FC8D59", "#D53E4F")) + ggtitle("Vascular Endothelial Cells") + xlab("Timepoint") + ylab("H19 Expression") + theme(plot.title = element_text(size=46)) + theme(axis.text.x = element_text(size = 32)) + theme(axis.text.y = element_text(size = 32)) + theme(axis.title.x = element_text(size = 40)) + theme(axis.title.y = element_text(size = 40)) + theme(legend.position = "none") + scale_y_continuous(limits = c(0, 6.5)) + geom_boxplot(width=0.25, color="black", notch=T, alpha=0.4, fill="white")
+```
+
+```{r}
+# Combine violins and save final plot
+
+comb_plot <-  plot_grid(ACM_plot, VCM_plot, EPI_plot, FIB_plot, VIC_plot, VASCE_plot, ENDO_plot, VEC_plot, nrow=2, ncol=4, scale=0.9)
+
+save_plot("~/Fig-3b.png",
+          comb_plot,
+          base_height = 21,
+          base_width = 49,
+          dpi = 300
+)
+```
+
+

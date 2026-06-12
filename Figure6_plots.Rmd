@@ -1,0 +1,119 @@
+---
+title: "Figure 6 plots"
+output: pdf_document
+author: Lara Feulner
+---
+
+```{r}
+# Load packages
+
+library(ggplot2)
+library(ggsignif)
+library(cowplot)
+```
+
+# Figure 6b plots
+# Note original plots were cropped and processed in Adobe Illustrator to generate final figure
+
+```{r, warning=F}
+h19 = read.csv("~/qPCR_dCT_results.csv", header=1)
+h19$siRNA <- factor(h19$siRNA, levels = c("Neg Control", "H19"))
+
+p1 = ggplot(h19, aes(x=Celltype, y=H19_dCT, fill=siRNA)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=H19_dCT-H19_StD, ymax=H19_dCT+H19_StD), width=.2,
+                 position=position_dodge(.9)) +
+  labs(x = "", y = "Relative expression") + 
+  ggtitle("H19") +
+  theme(title = element_text(size = 19, face="bold")) + 
+  theme(legend.text = element_text(size = 17, face="bold")) + 
+  theme(axis.text = element_text(size = 24, face="bold", color="grey20")) +
+  geom_signif(comparisons = c("Neg Control", "H19"), test="wilcox.test", 
+  map_signif_level = T, size=15, textsize = 20) + geom_signif(y_position = 35, xmin = 0.8, 
+              xmax = 1.2, annotation = "*",
+              tip_length = 0, textsize=20)
+
+p2 = ggplot(h19, aes(x=Celltype, y=CDH5_dCT, fill=siRNA)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=CDH5_dCT-CDH5_StD, ymax=CDH5_dCT+CDH5_StD), width=.2,
+                 position=position_dodge(.9)) +
+  labs(x = "", y = "Relative expression") + 
+  ggtitle("CDH5") +
+  theme(title = element_text(size = 19, face="bold")) + 
+  theme(legend.text = element_text(size = 17, face="bold")) + 
+  theme(axis.text = element_text(size = 20, face="bold", color="grey20")) + 
+  geom_signif(y_position = c(6,6), xmin = c(0.8,1.8), 
+              xmax = c(1.2,2.2), annotation = c("*","*"),
+              tip_length = 0, textsize=20)
+
+p3 = ggplot(h19, aes(x=Celltype, y=TIE1_dCT, fill=siRNA)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=TIE1_dCT-TIE1_StD, ymax=TIE1_dCT+TIE1_StD), width=.2,
+                 position=position_dodge(.9)) + 
+  labs(x = "", y = "Relative expression") + 
+  ggtitle("TIE1") +
+  theme(title = element_text(size = 19, face="bold")) + 
+  theme(legend.text = element_text(size = 17, face="bold")) + 
+  theme(axis.text = element_text(size = 20, face="bold", color="grey20"))
+
+p4 = ggplot(h19, aes(x=Celltype, y=CD31_dCT, fill=siRNA)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=CD31_dCT-CD31_StD, ymax=CD31_dCT+CD31_StD), width=.2,
+                 position=position_dodge(.9)) +
+  labs(x = "", y = "Relative expression") + 
+  ggtitle("CD31") +
+  theme(title = element_text(size = 19, face="bold")) + 
+  theme(legend.text = element_text(size = 17, face="bold")) + 
+  theme(axis.text = element_text(size = 20, face="bold", color="grey20")) + 
+  geom_signif(y_position = 15, xmin = 0.8, 
+              xmax = 1.2, annotation = c("*"),
+              tip_length = 0, textsize=20)
+
+p5 = ggplot(h19, aes(x=Celltype, y=TWIST1_dCT, fill=siRNA)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=TWIST1_dCT-TWIST1_StD, ymax=TWIST1_dCT+TWIST1_StD), width=.2,
+                 position=position_dodge(.9)) +
+  labs(x = "", y = "Relative expression") + 
+  ggtitle("TWIST1") +
+  theme(title = element_text(size = 19, face="bold")) + 
+  theme(legend.text = element_text(size = 17, face="bold")) + 
+  theme(axis.text = element_text(size = 20, face="bold", color="grey20")) + 
+  geom_signif(y_position = 0.0138, xmin = 1.8, 
+              xmax = 2.2, annotation = "*",
+              tip_length = 0, textsize=20)
+
+save_plot("~/qPCR_plots/H19.png",
+          p1,
+          base_height = 14.75,
+          base_width = 13.75,
+          dpi = 300)
+
+save_plot("~/qPCR_plots/CDH5.png",
+          p2,
+          base_height = 14.75,
+          base_width = 13.75,
+          dpi = 300)
+
+save_plot("~/qPCR_plots/TIE1.png",
+          p3,
+          base_height = 14.75,
+          base_width = 13.75,
+          dpi = 300)
+
+save_plot("~/qPCR_plots/CD31.png",
+          p4,
+          base_height = 14.75,
+          base_width = 13.75,
+          dpi = 300)
+
+save_plot("~/qPCR_plots/TWIST1.png",
+          p5,
+          base_height = 14.75,
+          base_width = 13.75,
+          dpi = 300)
+```

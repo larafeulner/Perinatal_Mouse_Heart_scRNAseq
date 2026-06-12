@@ -1,0 +1,228 @@
+---
+title: "Figure 1 plots"
+output: pdf_document
+author: Lara Feulner
+---
+
+```{r}
+# Load packages
+
+library(Seurat)
+library(ggplot2)
+library(cowplot)
+library(patchwork)
+library(gridExtra)
+```
+
+# Figure 1 plots
+
+```{r}
+# Load clustered/annotated RDS file
+# See "Clustering-DGE.Rmd" for code used to generate object
+
+data_cluster <- readRDS("~/Perinatal_clusterannot.Rds")
+```
+
+```{r}
+# Figure 1a plot
+
+cell_types <- levels(data_cluster)
+color_cells <-c("lightblue",
+"khaki1",
+"slategray3",
+"darkgoldenrod2",
+"#3cb371",
+"#bc8f8f",
+"mediumpurple4",
+"lavender",
+"#9acd32",
+"pink2",
+"#b03060",
+"peachpuff2",
+"plum",
+"mediumpurple1",
+"palevioletred4",
+"mediumblue",
+"hotpink",
+"yellow",
+"skyblue2",
+"pink4",
+"red",
+"peru",
+"#1e90ff",
+"#00ff7f",
+"salmon",
+"aquamarine4",
+"honeydew4")
+names(color_cells) <- cell_types
+
+# Note for actual figure used label=F and manually added labels to UMAP
+dim1.gg <- DimPlot(data_cluster, cols=color_cells, label=T, label.size = 4.5) + 
+  labs(title = "", x = "UMAP_1", y = "UMAP_2")
+d1 <- dim1.gg +
+  guides(color = guide_legend(override.aes = list(size = 4.5, alpha=1))) +
+  theme(aspect.ratio = 1,
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        axis.line = element_line(arrow = arrow(type = "closed", length = unit(0.15, "cm"))),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_text(hjust = 0.15),
+        legend.text = element_text(size=16))
+
+save_plot("~/Fig-1a.png",
+          d1,
+          base_height = 8,
+          base_width = 11,
+          dpi = 300
+)
+```
+
+```{r}
+# Figure 1b plot
+# Credit to Florian Wünnemann for this portion
+
+## Overview only across cell types and age
+cell_stats_cell_types <- data_cluster@meta.data %>%
+  group_by(Celltype_abbr,Age) %>%
+  tally() %>%
+  mutate("fraction" = n / sum(n)) %>%
+  ungroup() 
+## Calculate total number of cells per cell type
+cell_numbers <- cell_stats_cell_types %>%
+  group_by(Celltype_abbr) %>%
+  summarise("total_number" = sum(n)) %>%
+  arrange(desc(total_number))
+cell_numbers$cell_type <- factor(cell_numbers$Celltype_abbr, 
+                                               levels = rev(cell_numbers$Celltype_abbr))
+## Add total cell number as a facet variable
+cell_stats_cell_types <- merge(cell_stats_cell_types,cell_numbers, by = "Celltype_abbr")
+## Set factor order of cell types from most abundant to least abundant
+cell_stats_cell_types$cell_type <- factor(cell_stats_cell_types$cell_type, 
+                                               levels = rev(cell_numbers$cell_type))
+## Set factor order for age
+cell_stats_cell_types$Age <- factor(cell_stats_cell_types$Age, 
+                                               levels = rev(unique(cell_stats_cell_types$Age)))
+
+## barplot
+age_colors = rev(brewer.pal(6, "Spectral"))
+barplot <- ggplot(cell_stats_cell_types,aes(cell_type,fraction * 100, fill = Age)) +
+  geom_bar(stat = "identity", color = "black", width=0.8) +
+  coord_flip() +
+  labs(x = "Cell types",
+       y = "% Cells") +
+  scale_fill_manual("Age",
+                    values = rev(age_colors)) +
+  theme_cowplot() + 
+  theme(legend.position = "none",
+         axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        axis.title = element_text(color="black", face="bold")) +
+  guides(fill = guide_legend(nrow = 1))
+
+# Colors from UMAP sorted by no. of cells for each cell type
+color_cells_sizeorder <-c(
+"#9acd32",
+"slategray3",
+"pink2",
+"plum",
+"mediumpurple1",
+"lightblue",
+"darkgoldenrod2",
+"khaki1",
+"peachpuff2",
+"#3cb371",
+"#bc8f8f",
+"honeydew4",
+"mediumpurple4",
+"aquamarine4",
+"lavender",
+"palevioletred4",
+"#b03060",
+"red",
+"pink4",
+"skyblue2",
+"salmon",
+"hotpink",
+"peru",
+"mediumblue",
+"yellow",
+"#00ff7f",
+"#1e90ff"
+)
+
+## cell numbers plot
+cell_numbers_plot <- ggplot(cell_numbers,aes(cell_type,log10(total_number))) +
+  geom_bar(stat = "identity", color= "grey50", fill = color_cells_sizeorder, width=0.8) +
+  geom_text(aes(label=total_number), hjust=1.3, colour="black", size=3) +
+  coord_flip() + 
+  theme_cowplot() +
+  theme(panel.grid.minor= element_line(colour = "grey50"),
+        axis.ticks.y = element_blank(), axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.line = element_blank(),
+        axis.title = element_text(color="black", face="bold")) +
+  labs(x = "", y = "log10(# cells)")
+
+# Combine barplot and cell_numbers_plots with Patchwork
+comb_plot <- barplot + cell_numbers_plot + plot_layout(nrow=1, ncol=2, widths = c(3,1), height = c(1))
+
+save_plot("~/Fig-1b.png",
+          comb_plot,
+          base_height = 8,
+          base_width = 7,
+          dpi = 300
+)
+```
+
+```{r}
+# Figure 1c plot
+
+age_colors = rev(brewer.pal(6, "Spectral"))
+
+f1 = DimPlot(data_cluster, group.by="Age", split.by="Age", cols=age_colors) + guides(color = guide_legend(override.aes = list(size = 4.5))) + theme(legend.text = element_text(size=12)) + theme(aspect.ratio = 1, panel.border = element_blank(), panel.grid = element_blank(),axis.text = element_blank(),axis.ticks = element_blank())
+
+save_plot("~/Fig-1c.png",
+          f1,
+          base_height = 3,
+          base_width = 10,
+          dpi = 300)
+```
+
+```{r}
+# Figure 1d plot
+
+mygenes = c("Myl2", "Myl7", "Pitx2", "Nppa", "Bmp10", "Hcn4", "Gja1", "Gja5", "Myh11", "Acta2", "Kcnj8", "Mia", "Col1a1", "Tcf21", "Osr1", "Vcan", "Cthrc1", "Adamts19", "Tbx20", "Hapln1", "Cdh5", "Npr3", "Fabp4", "Lyve1", "Gkn3", "Upk3b", "Cd14", "Thbs1", "H2-Ab1", "Cd3d", "Cd4", "Cd8a", "Cd79a", "Cpa3", "Pmel", "Cnp", "Nefl")
+
+levels(data_cluster) <- c('NEUR', 'SCH', 'MELA', 'MAST', 'BCELL', 'TCELL', 'MAC3', 'MAC2', 'MAC1', 'EPI', 'ARTE', 'LYMPHE', 'VASCE', 'ENDO', 'VEC', 'VIC', 'CFIB2', 'CFIB1', 'CHON', 'PERI', 'VSM2', 'VSM1', 'TCM', 'SAN/CC', 'ACM2', 'ACM1', 'VCM')
+
+dot = DotPlot(data_cluster, features=mygenes, cols = c("lightgrey", "royalblue4")) + theme(axis.text.x = element_text(angle = 45, hjust=1)) + theme(axis.text.x = element_text(size = 20)) + theme(axis.text.y = element_text(size = 20)) + theme(axis.title.x = element_text(size = 22)) + theme(axis.title.y = element_text(size = 22)) + theme(legend.text = element_text(size = 22)) + theme(legend.title = element_text(size = 22))
+
+save_plot("~/Fig-1d.png",
+          dot,
+          base_height = 10,
+          base_width = 20,
+          dpi = 300
+)
+```
+
+# Feature Plots as in Figure S1
+
+```{r}
+dim1.gg <- FeaturePlot(data_cluster, "Myl2", cols=c("lightgray", "dodgerblue3"), pt.size=0.3) + 
+  labs(title = "Myl2 (VCM)", x = "UMAP_1", y = "UMAP_2")
+f1 <- dim1.gg +
+  theme(aspect.ratio = 1,
+        panel.border = element_blank(),
+        panel.grid = element_blank(),
+        axis.line = element_line(arrow = arrow(type = "closed", length = unit(0.15, "cm"))),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_text(hjust = 0.15))
+
+save_plot("~/FigS1-Myl2.png",
+          f1,
+          base_height = 4,
+          base_width = 5,
+          dpi = 300)
+```

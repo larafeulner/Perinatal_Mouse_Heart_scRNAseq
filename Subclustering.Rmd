@@ -1,0 +1,157 @@
+---
+title: "Subclustering for psupertime analysis"
+output: pdf_document
+author: Lara Feulner
+---
+
+# Example of subclustering and isolation of CFIB cells for downstream psupertime analysis
+# Repeat for all major cell types
+
+```{r}
+# Load packages
+
+library(Seurat)
+library(Matrix)
+library(DropletUtils)
+```
+
+```{r}
+# Load original Seurat object
+
+seurat_object <- readRDS("~/Perinatal_clusterannot.Rds")
+Idents(seurat_object) <- seurat_object@meta.data$Celltype_abbr
+```
+
+```{r}
+# Save raw matrix of CFIB1 cells from original Seurat object in 10x format
+
+seurat_sub <- subset(seurat_object, ident="CFIB1")
+filtered_cells <- rownames(seurat_sub@meta.data)
+filt_counts <- Matrix(as.matrix(seurat_sub@assays$RNA@counts[,filtered_cells]),sparse = TRUE)
+write10xCounts("~/CFIB1_subset_mat", filt_counts)
+write.table(seurat_sub@meta.data, "~/CFIB1_meta.txt", sep="\t")
+```
+
+```{r}
+# Read matrix saved in previous step and create Seurat object
+
+seurat_subset = Read10X("~/CFIB1_subset_mat")
+seurat_subset = CreateSeuratObject(seurat_subset, names.field=c(1,2))
+```
+
+```{r}
+# Add Percent mito
+seurat_subset[["percent_mito"]] <- PercentageFeatureSet(seurat_subset, pattern = "^mt-")
+```
+
+```{r}
+# Add metadata
+
+subset_meta = read.table("~/CFIB1_meta.txt", header=T)
+
+seurat_subset$Age = unlist(subset_meta["Age"])
+seurat_subset$State = unlist(subset_meta["State"])
+seurat_subset$Sex = unlist(subset_meta["Sex"])
+```
+
+```{r}
+# Attempt to filter out Myl2+ cells resulting from ambient RNA (not applicable for VCM subset!)
+# Would recommend using SoupX tool instead for ambient RNA removal when using 10x Genomics datasets
+
+seurat_subset <-  subset(seurat_subset, subset=Myl2<1.5)
+```
+
+```{r}
+# Cell cycle scoring
+
+s_mouse_genes_regev <- read.table("~/mouse_s_genes.csv", sep="\t", header=T)
+s_mouse_genes_regev <- s_mouse_genes_regev$s_mouse
+g2m_mouse_genes_regev <- read.table("~/mouse_g2m_genes.csv", sep="\t", header=T)
+g2m_mouse_genes_regev <- g2m_mouse_genes_regev$g2m_mouse
+
+seurat_subset2 = seurat_subset
+seurat_subset2 = NormalizeData(seurat_subset2, normalization.method = 'LogNormalize', scale.factor = 1e4)
+seurat_subset2 = CellCycleScoring(seurat_subset2, s.features = s_mouse_genes_regev, g2m.features = g2m_mouse_genes_regev)
+seurat_subset$S.Score = seurat_subset2@meta.data$S.Score
+seurat_subset$G2M.Score = seurat_subset2@meta.data$G2M.Score
+seurat_subset$Phase = seurat_subset2@meta.data$Phase
+```
+
+```{r}
+# Run SCTransform
+
+seurat_subset_SCT = SCTransform(seurat_subset, vars.to.regress = c("S.Score", "G2M.Score", "percent_mito"))
+```
+
+```{r}
+# Run PCA
+seurat_subset_PCA = RunPCA(seurat_subset_SCT)
+```
+
+```{r}
+# Run UMAP and FindNeighbors
+
+seurat_subset_UMAP <- RunUMAP(object = seurat_subset_PCA, reduction = "pca", dims = c(1:20))
+
+seurat_subset_neighbors = FindNeighbors(seurat_subset_UMAP, compute.SNN=T, reduction="pca", c(1:20))
+```
+
+```{r}
+# Perform clustering
+
+seurat_subset_cluster <- FindClusters(
+  object = seurat_subset_neighbors,
+  resolution = 0.2,
+  algorithm = 2,
+  n.iter=50,
+  n.start = 20
+)
+```
+
+```{r}
+# View DimPlot
+DimPlot(seurat_subset_cluster, label=T)
+```
+
+```{r}
+# View DimPlot grouped by Age
+DimPlot(seurat_subset_cluster, label=T, group.by ="Age")
+```
+
+```{r}
+# Find Markers for each cluster
+cluster0markers <- FindMarkers(seurat_subset_cluster, ident.1=0, only.pos=T)
+```
+
+```{r}
+# View Feature Plots
+FeaturePlot(seurat_subset_cluster, "Acta2")
+```
+
+```{r}
+# View Violin Plots
+VlnPlot(seurat_subset_cluster, "Rpl28")
+```
+
+```{r}
+# Subset clusters 0 and 1 as being most representative of CFIB
+# Cluster 2 enriched for smooth muscle markers (ex. Acta2), cluster 3 enriched for ribosomes, cluster 4 too separate
+# Judgement calls made for each cell type 
+
+Idents(seurat_subset_cluster) <- seurat_subset_cluster@meta.data$seurat_clusters
+sub <- subset(seurat_subset_cluster, idents=c(0,1))
+```
+
+```{r}
+# Save raw matrix of purified-CFIB cells in 10x format
+# This will be used for downstream psupertime analysis
+
+filtered_cells <- rownames(sub@meta.data)
+filt_counts <- Matrix(as.matrix(sub@assays$RNA@counts[,filtered_cells]),sparse = TRUE)
+
+write10xCounts("~/subset_mats_psupertime/CFIB1_subset_mat", filt_counts)
+
+write.table(sub@meta.data, "~/subset_meta_psupertime/CFIB1_meta.txt", sep="\t")
+```
+
+

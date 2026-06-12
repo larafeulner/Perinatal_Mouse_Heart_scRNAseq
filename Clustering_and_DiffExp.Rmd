@@ -1,0 +1,428 @@
+---
+title: "Clustering / Differential Gene Expression Analysis"
+output: pdf_document
+author: Lara Feulner
+---
+
+# Original analysis performed on M2 Macbook Air (2022) running macOS Monterey 12.4 and R 4.2.3.
+
+# Notable package versions used for analysis: Seurat 4.1.1, SeuratObject 4.1.0, sctransform 0.3.3, uwot 0.1.11, irlba 2.3.5. See full list on this GitHub for more details.  
+
+# Note this has not been tested on Seurat v5 and may need modifications, can also expect changes in differential expression results compared to v4.
+
+```{r}
+# Load packages
+
+library(Seurat)
+```
+
+```{r}
+# Load filtered count matrices for timepoint replicates
+
+E14.r1 <- Read10X("~/FilteredCounts/E14.5_r1_counts_mat")
+E14.r2 <- Read10X("~/FilteredCounts/E14.5_r2_counts_mat")
+E14.r3 <- Read10X("~/FilteredCounts/E14.5_r3_counts_mat")
+E14.r4 <- Read10X("~/FilteredCounts/E14.5_r4_counts_mat")
+E14.r5 <- Read10X("~/FilteredCounts/E14.5_r5_counts_mat")
+E14.r6 <- Read10X("~/FilteredCounts/E14.5_r6_counts_mat")
+
+E16.r1 <- Read10X("~/FilteredCounts/E16.5_r1_counts_mat")
+E16.r2 <- Read10X("~/FilteredCounts/E16.5_r2_counts_mat")
+E16.r3 <- Read10X("~/FilteredCounts/E16.5_r3_counts_mat")
+E16.r4 <- Read10X("~/FilteredCounts/E16.5_r4_counts_mat")
+E16.r5 <- Read10X("~/FilteredCounts/E16.5_r5_counts_mat")
+E16.r6 <- Read10X("~/FilteredCounts/E16.5_r6_counts_mat")
+
+E18.r1 <- Read10X("~/FilteredCounts/E18.5_r1_counts_mat")
+E18.r2 <- Read10X("~/FilteredCounts/E18.5_r2_counts_mat")
+E18.r3 <- Read10X("~/FilteredCounts/E18.5_r3_counts_mat")
+E18.r4 <- Read10X("~/FilteredCounts/E18.5_r4_counts_mat")
+E18.r5 <- Read10X("~/FilteredCounts/E18.5_r5_counts_mat")
+E18.r6 <- Read10X("~/FilteredCounts/E18.5_r6_counts_mat")
+
+P0.r1 <- Read10X("~/FilteredCounts/P0_r1_counts_mat")
+P0.r2 <- Read10X("~/FilteredCounts/P0_r2_counts_mat")
+P0.r3 <- Read10X("~/FilteredCounts/P0_r3_counts_mat")
+P0.r4 <- Read10X("~/FilteredCounts/P0_r4_counts_mat")
+P0.r5 <- Read10X("~/FilteredCounts/P0_r5_counts_mat")
+P0.r6 <- Read10X("~/FilteredCounts/P0_r6_counts_mat")
+
+P4.r1 <- Read10X("~/FilteredCounts/P4_r1_counts_mat")
+P4.r2 <- Read10X("~/FilteredCounts/P4_r2_counts_mat")
+P4.r3 <- Read10X("~/FilteredCounts/P4_r3_counts_mat")
+P4.r4 <- Read10X("~/FilteredCounts/P4_r4_counts_mat")
+P4.r5 <- Read10X("~/FilteredCounts/P4_r5_counts_mat")
+P4.r6 <- Read10X("~/FilteredCounts/P4_r6_counts_mat")
+
+P7.r1 <- Read10X("~/FilteredCounts/P7_r1_counts_mat")
+P7.r2 <- Read10X("~/FilteredCounts/P7_r2_counts_mat")
+P7.r3 <- Read10X("~/FilteredCounts/P7_r3_counts_mat")
+P7.r4 <- Read10X("~/FilteredCounts/P7_r4_counts_mat")
+P7.r5 <- Read10X("~/FilteredCounts/P7_r5_counts_mat")
+P7.r6 <- Read10X("~/FilteredCounts/P7_r6_counts_mat")
+```
+
+```{r}
+# Create Seurat objects
+
+E14.r1 <- CreateSeuratObject(E14.r1, names.field=c(1,2))
+E14.r2 <- CreateSeuratObject(E14.r2, names.field=c(1,2))
+E14.r3 <- CreateSeuratObject(E14.r3, names.field=c(1,2))
+E14.r4 <- CreateSeuratObject(E14.r4, names.field=c(1,2))
+E14.r5 <- CreateSeuratObject(E14.r5, names.field=c(1,2))
+E14.r6 <- CreateSeuratObject(E14.r6, names.field=c(1,2))
+
+E16.r1 <- CreateSeuratObject(E16.r1, names.field=c(1,2))
+E16.r2 <- CreateSeuratObject(E16.r2, names.field=c(1,2))
+E16.r3 <- CreateSeuratObject(E16.r3, names.field=c(1,2))
+E16.r4 <- CreateSeuratObject(E16.r4, names.field=c(1,2))
+E16.r5 <- CreateSeuratObject(E16.r5, names.field=c(1,2))
+E16.r6 <- CreateSeuratObject(E16.r6, names.field=c(1,2))
+
+E18.r1 <- CreateSeuratObject(E18.r1, names.field=c(1,2))
+E18.r2 <- CreateSeuratObject(E18.r2, names.field=c(1,2))
+E18.r3 <- CreateSeuratObject(E18.r3, names.field=c(1,2))
+E18.r4 <- CreateSeuratObject(E18.r4, names.field=c(1,2))
+E18.r5 <- CreateSeuratObject(E18.r5, names.field=c(1,2))
+E18.r6 <- CreateSeuratObject(E18.r6, names.field=c(1,2))
+
+P0.r1 <- CreateSeuratObject(P0.r1, names.field=c(1,2))
+P0.r2 <- CreateSeuratObject(P0.r2, names.field=c(1,2))
+P0.r3 <- CreateSeuratObject(P0.r3, names.field=c(1,2))
+P0.r4 <- CreateSeuratObject(P0.r4, names.field=c(1,2))
+P0.r5 <- CreateSeuratObject(P0.r5, names.field=c(1,2))
+P0.r6 <- CreateSeuratObject(P0.r6, names.field=c(1,2))
+
+P4.r1 <- CreateSeuratObject(P4.r1, names.field=c(1,2))
+P4.r2 <- CreateSeuratObject(P4.r2, names.field=c(1,2))
+P4.r3 <- CreateSeuratObject(P4.r3, names.field=c(1,2))
+P4.r4 <- CreateSeuratObject(P4.r4, names.field=c(1,2))
+P4.r5 <- CreateSeuratObject(P4.r5, names.field=c(1,2))
+P4.r6 <- CreateSeuratObject(P4.r6, names.field=c(1,2))
+
+P7.r1 <- CreateSeuratObject(P7.r1, names.field=c(1,2))
+P7.r2 <- CreateSeuratObject(P7.r2, names.field=c(1,2))
+P7.r3 <- CreateSeuratObject(P7.r3, names.field=c(1,2))
+P7.r4 <- CreateSeuratObject(P7.r4, names.field=c(1,2))
+P7.r5 <- CreateSeuratObject(P7.r5, names.field=c(1,2))
+P7.r6 <- CreateSeuratObject(P7.r6, names.field=c(1,2))
+```
+
+```{r}
+# Calculate percent mitochondria
+
+E14.r1[["percent_mito"]] <- PercentageFeatureSet(E14.r1, pattern = "^mt-")
+E14.r2[["percent_mito"]] <- PercentageFeatureSet(E14.r2, pattern = "^mt-")
+E14.r3[["percent_mito"]] <- PercentageFeatureSet(E14.r3, pattern = "^mt-")
+E14.r4[["percent_mito"]] <- PercentageFeatureSet(E14.r4, pattern = "^mt-")
+E14.r5[["percent_mito"]] <- PercentageFeatureSet(E14.r5, pattern = "^mt-")
+E14.r6[["percent_mito"]] <- PercentageFeatureSet(E14.r6, pattern = "^mt-")
+
+E16.r1[["percent_mito"]] <- PercentageFeatureSet(E16.r1, pattern = "^mt-")
+E16.r2[["percent_mito"]] <- PercentageFeatureSet(E16.r2, pattern = "^mt-")
+E16.r3[["percent_mito"]] <- PercentageFeatureSet(E16.r3, pattern = "^mt-")
+E16.r4[["percent_mito"]] <- PercentageFeatureSet(E16.r4, pattern = "^mt-")
+E16.r5[["percent_mito"]] <- PercentageFeatureSet(E16.r5, pattern = "^mt-")
+E16.r6[["percent_mito"]] <- PercentageFeatureSet(E16.r6, pattern = "^mt-")
+
+E18.r1[["percent_mito"]] <- PercentageFeatureSet(E18.r1, pattern = "^mt-")
+E18.r2[["percent_mito"]] <- PercentageFeatureSet(E18.r2, pattern = "^mt-")
+E18.r3[["percent_mito"]] <- PercentageFeatureSet(E18.r3, pattern = "^mt-")
+E18.r4[["percent_mito"]] <- PercentageFeatureSet(E18.r4, pattern = "^mt-")
+E18.r5[["percent_mito"]] <- PercentageFeatureSet(E18.r5, pattern = "^mt-")
+E18.r6[["percent_mito"]] <- PercentageFeatureSet(E18.r6, pattern = "^mt-")
+
+P0.r1[["percent_mito"]] <- PercentageFeatureSet(P0.r1, pattern = "^mt-")
+P0.r2[["percent_mito"]] <- PercentageFeatureSet(P0.r2, pattern = "^mt-")
+P0.r3[["percent_mito"]] <- PercentageFeatureSet(P0.r3, pattern = "^mt-")
+P0.r4[["percent_mito"]] <- PercentageFeatureSet(P0.r4, pattern = "^mt-")
+P0.r5[["percent_mito"]] <- PercentageFeatureSet(P0.r5, pattern = "^mt-")
+P0.r6[["percent_mito"]] <- PercentageFeatureSet(P0.r6, pattern = "^mt-")
+
+P4.r1[["percent_mito"]] <- PercentageFeatureSet(P4.r1, pattern = "^mt-")
+P4.r2[["percent_mito"]] <- PercentageFeatureSet(P4.r2, pattern = "^mt-")
+P4.r3[["percent_mito"]] <- PercentageFeatureSet(P4.r3, pattern = "^mt-")
+P4.r4[["percent_mito"]] <- PercentageFeatureSet(P4.r4, pattern = "^mt-")
+P4.r5[["percent_mito"]] <- PercentageFeatureSet(P4.r5, pattern = "^mt-")
+P4.r6[["percent_mito"]] <- PercentageFeatureSet(P4.r6, pattern = "^mt-")
+
+P7.r1[["percent_mito"]] <- PercentageFeatureSet(P7.r1, pattern = "^mt-")
+P7.r2[["percent_mito"]] <- PercentageFeatureSet(P7.r2, pattern = "^mt-")
+P7.r3[["percent_mito"]] <- PercentageFeatureSet(P7.r3, pattern = "^mt-")
+P7.r4[["percent_mito"]] <- PercentageFeatureSet(P7.r4, pattern = "^mt-")
+P7.r5[["percent_mito"]] <- PercentageFeatureSet(P7.r5, pattern = "^mt-")
+P7.r6[["percent_mito"]] <- PercentageFeatureSet(P7.r6, pattern = "^mt-")
+```
+
+```{r}
+# Add timepoint metadata
+
+E14.r1$Age <- "E14.5"
+E14.r2$Age <- "E14.5"
+E14.r3$Age <- "E14.5"
+E14.r4$Age <- "E14.5"
+E14.r5$Age <- "E14.5"
+E14.r6$Age <- "E14.5"
+
+E16.r1$Age <- "E16.5"
+E16.r2$Age <- "E16.5"
+E16.r3$Age <- "E16.5"
+E16.r4$Age <- "E16.5"
+E16.r5$Age <- "E16.5"
+E16.r6$Age <- "E16.5"
+
+E18.r1$Age <- "E18.5"
+E18.r2$Age <- "E18.5"
+E18.r3$Age <- "E18.5"
+E18.r4$Age <- "E18.5"
+E18.r5$Age <- "E18.5"
+E18.r6$Age <- "E18.5"
+
+P0.r1$Age <- "P0"
+P0.r2$Age <- "P0"
+P0.r3$Age <- "P0"
+P0.r4$Age <- "P0"
+P0.r5$Age <- "P0"
+P0.r6$Age <- "P0"
+
+P4.r1$Age <- "P4"
+P4.r2$Age <- "P4"
+P4.r3$Age <- "P4"
+P4.r4$Age <- "P4"
+P4.r5$Age <- "P4"
+P4.r6$Age <- "P4"
+
+P7.r1$Age <- "P7"
+P7.r2$Age <- "P7"
+P7.r3$Age <- "P7"
+P7.r4$Age <- "P7"
+P7.r5$Age <- "P7"
+P7.r6$Age <- "P7"
+```
+
+```{r}
+# Add sex metadata where M=male and F=female
+
+E14.r1$Sex <- "M"
+E14.r2$Sex <- "M"
+E14.r3$Sex <- "F"
+E14.r4$Sex <- "M"
+E14.r5$Sex <- "F"
+E14.r6$Sex <- "F"
+
+E16.r1$Sex <- "M"
+E16.r2$Sex <- "F"
+E16.r3$Sex <- "F"
+E16.r4$Sex <- "M"
+E16.r5$Sex <- "F"
+E16.r6$Sex <- "F"
+
+E18.r1$Sex <- "M"
+E18.r2$Sex <- "M"
+E18.r3$Sex <- "F"
+E18.r4$Sex <- "M"
+E18.r5$Sex <- "F"
+E18.r6$Sex <- "M"
+
+P0.r1$Sex <- "F"
+P0.r2$Sex <- "F"
+P0.r3$Sex <- "M"
+P0.r4$Sex <- "F"
+P0.r5$Sex <- "M"
+P0.r6$Sex <- "F"
+
+P4.r1$Sex <- "F"
+P4.r2$Sex <- "M"
+P4.r3$Sex <- "M"
+P4.r4$Sex <- "F"
+P4.r5$Sex <- "M"
+P4.r6$Sex <- "F"
+
+P7.r1$Sex <- "M"
+P7.r2$Sex <- "F"
+P7.r3$Sex <- "M"
+P7.r4$Sex <- "F"
+P7.r5$Sex <- "F"
+P7.r6$Sex <- "M"
+```
+
+```{r}
+# Merge all timepoint replicates
+
+data = merge(E14.r1, y=c(E14.r2, E14.r3, E14.r4, E14.r5, E14.r6, E16.r1, E16.r2, E16.r3, E16.r4, E16.r5, E16.r6, E18.r1, E18.r2, E18.r3, E18.r4, E18.r5, E18.r6, P0.r1, P0.r2, P0.r3, P0.r4, P0.r5, P0.r6, P4.r1, P4.r2, P4.r3, P4.r4, P4.r5, P4.r6, P7.r1, P7.r2, P7.r3, P7.r4, P7.r5, P7.r6))
+```
+
+```{r}
+# Remove replicate R objects to clear space
+
+remove(E14.r1)
+remove(E14.r2)
+remove(E14.r3)
+remove(E14.r4)
+remove(E14.r5)
+remove(E14.r6)
+
+remove(E16.r1)
+remove(E16.r2)
+remove(E16.r3)
+remove(E16.r4)
+remove(E16.r5)
+remove(E16.r6)
+
+remove(E18.r1)
+remove(E18.r2)
+remove(E18.r3)
+remove(E18.r4)
+remove(E18.r5)
+remove(E18.r6)
+
+remove(P0.r1)
+remove(P0.r2)
+remove(P0.r3)
+remove(P0.r4)
+remove(P0.r5)
+remove(P0.r6)
+
+remove(P4.r1)
+remove(P4.r2)
+remove(P4.r3)
+remove(P4.r4)
+remove(P4.r5)
+remove(P4.r6)
+
+remove(P7.r1)
+remove(P7.r2)
+remove(P7.r3)
+remove(P7.r4)
+remove(P7.r5)
+remove(P7.r6)
+```
+
+```{r}
+# Load cell cycle genes 
+
+s_mouse_genes_regev <- read.table("~/mouse_s_genes.csv", sep="\t", header=T)
+s_mouse_genes_regev <- s_mouse_genes_regev$s_mouse
+
+g2m_mouse_genes_regev <- read.table("~/mouse_g2m_genes.csv", sep="\t", header=T)
+g2m_mouse_genes_regev <- g2m_mouse_genes_regev$g2m_mouse
+```
+
+```{r}
+# Perform normalization and cell cycle scoring, stored in a new Seurat object (data2)
+
+data2 <- NormalizeData(data, normalization.method = 'LogNormalize', scale.factor = 1e4)
+data2 <- CellCycleScoring(data2, s.features = s_mouse_genes_regev, g2m.features = g2m_mouse_genes_regev)
+```
+
+```{r}
+# Transfer cell cycle scoring information from the second Seurat object to the original object
+# As the original object has not been normalized, SCTransform can be subsequently used
+
+data$S.Score <- data2@meta.data$S.Score
+data$G2M.Score <- data2@meta.data$G2M.Score
+data$Phase <- data2@meta.data$Phase
+```
+
+```{r}
+# Perform SCTransform
+
+options(future.globals.maxSize=4000000000)
+# Otherwise may get error similar to below when running SCTransform: 
+# The total size of the 19 globals exported for future expression (‘FUN()’) is 1.35 GiB. This exceeds the maximum allowed size 500.00 MiB per plan() argument 'maxSizeOfObjects'. 
+data_SCT <- SCTransform(data, vars.to.regress = c("S.Score", "G2M.Score", "percent_mito"))
+```
+
+# Below are the codes used for subsequent dimension reduction and clustering, but note there are minor variances in PCA results across different environments (ex. different machines) that result in similar but not identical UMAPs even using same package versions. Issue discussed here: https://github.com/satijalab/seurat/issues/5358 and https://github.com/satijalab/seurat/issues/8501
+
+```{r}
+# Run PCA
+
+data_PCA <- RunPCA(object = data_SCT, npcs = 100)
+```
+
+```{r}
+# Run UMAP and Find Neighbors
+# Note that very large dims were found required to separate pericytes from both smooth muscle clusters 
+
+data_UMAP <- RunUMAP(object = data_PCA, reduction = "pca", dims = c(1:83))
+data_neighbors <- FindNeighbors(data_UMAP, compute.SNN=T, reduction="pca", c(1:83))
+```
+
+```{r}
+# Perform Clustering
+# Note this was repeated at higher resolutions (up to resolution=10) to help identify smaller cell types and subtypes
+
+data_cluster <- FindClusters(
+  object = data_neighbors,
+  resolution = 0.3,
+  algorithm = 2,
+  n.iter = 50,
+  n.start = 20
+)
+```
+
+# To get original UMAP, can transfer dimension reduction information from original Seurat object to data_SCT object. Note that data_SCT should have been generated with sctransform version 0.33 to ensure reproducibility.
+
+```{r}
+data_orig_anal <- readRDS("~/Perinatal_clusterannot.Rds")
+
+# If you want to verify matrices following SCTransform are identical:
+# sct_data1 <- data_orig_anal@assays$SCT@data
+# sct_data2 <- data_cluster@assays$SCT@data
+# all.equal(sct_data1, sct_data2)
+# if not TRUE need to use data_orig_anal object instead to replicate all downstream plots/analyses!
+
+# Transfer dimension reduction information
+data_cluster@reductions$pca = data_orig_anal@reductions$pca
+data_cluster@reductions$umap = data_orig_anal@reductions$umap
+```
+
+# Now also transfer metadata from original Seurat object to obtain cell type annotation and original clustering information
+
+```{r}
+data_cluster@meta.data = data_orig_anal@meta.data
+Idents(data_cluster) <- data_cluster@meta.data$Celltype_abbr
+```
+
+# Visualization
+
+```{r}
+# View Dim plot (see Figure1_plots.Rmd for reproduction)
+DimPlot(data_cluster, label=T)
+```
+
+```{r}
+# View Feature plot (see Figure1_plots.Rmd for reproduction)
+FeaturePlot(data_cluster, "Myl2")
+```
+
+
+# Differential Gene Expression Analysis
+
+```{r}
+# By cluster (example cluster 13, repeat for all)
+# These results were used to guide manual cluster annotation
+
+DefaultAssay(data_cluster) = "SCT"
+Idents(data_cluster) <- data_cluster@meta.data$seurat_clusters
+
+cluster13markers <- FindMarkers(data_cluster, ident.1=13, min.pct=0.1, min.diff.pct=0.1, only.pos=T)
+```
+
+```{r}
+# By cell type (example EPI, repeat for all types)
+# Corresponds to Table 2
+
+DefaultAssay(data_cluster) = "SCT"
+Idents(data_cluster) <- data_cluster@meta.data$Celltype_abbr
+
+EPImarkers <- FindMarkers(data_cluster, ident.1="EPI", min.pct=0.1, min.diff.pct=0.1, only.pos=T)
+
+# Genes enriched in ACM1 compared to ACM2
+# Corresponds to Table 3
+# Lower thresholds needed due to low Pitx2 expression at timepoints analysed
+
+ACM1vACM2markers <- FindMarkers(data_cluster, ident.1="ACM1", ident.2="ACM2", min.pct=0.1, logfc.threshold = 0.1, only.pos=F)
+```
+
