@@ -12,4 +12,4 @@ psupertime.R: psupertime_analysis, corresponding to Figure 3A.
 
 plot_dt and sceptic_pseudotime folders contain files used for supplemental sceptic analysis in Python (sceptic_ipynb).
 
-R_package_versions.txt includes returns from SessionInfo() command in R and represent versions used during time of analysis. 
+R_package_versions.txt includes returns from a prior SessionInfo() command in R and represent versions used during time of analysis. 
